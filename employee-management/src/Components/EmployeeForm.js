@@ -6,11 +6,16 @@ import {
 } from '@mui/material';
 import { getStates } from '../Services/api';
 import 'jquery-validation/dist/jquery.validate.min.js';
-
-export default function EmployeeForm({ open, handleClose, handleSave, initialData }) {
+import { Snackbar, Alert } from '@mui/material';
+export default function EmployeeForm({ open, handleClose, handleSave, initialData, employees }) 
+ {
   const [form, setForm] = useState(initialData || {});
   const [states, setStates] = useState([]);
   const formRef = useRef();
+const [duplicateOpen, setDuplicateOpen] = useState(false);
+const handleDuplicateClose = () => {
+  setDuplicateOpen(false);
+};
 
   useEffect(() => {
     getStates().then(res => setStates(res.data));
@@ -38,13 +43,27 @@ export default function EmployeeForm({ open, handleClose, handleSave, initialDat
           Name: "Please enter name",
         },
         submitHandler: function () {
-          handleSave({
-            ...form,
-            Salary: parseFloat(form.Salary) || 0,
-            DOB: form.DOB?.toString(),
-            DOJ: form.DOJ?.toString()
-          });
-        }
+  const isDuplicate = employees?.some(emp =>
+    emp.Name.trim().toLowerCase() === form.Name?.trim().toLowerCase() &&
+    emp.DOB?.substring(0, 10) === form.DOB?.substring(0, 10) &&
+    (!form.Id || emp.Id !== form.Id)
+  );
+
+  if (isDuplicate) {
+    setTimeout(() => setDuplicateOpen(true), 0);
+
+    return;
+  }
+
+  handleSave({
+    ...form,
+    Salary: parseFloat(form.Salary) || 0,
+    DOB: form.DOB?.toString(),
+    DOJ: form.DOJ?.toString()
+  });
+}
+
+
       });
     }
 
@@ -125,6 +144,12 @@ export default function EmployeeForm({ open, handleClose, handleSave, initialDat
           <Button onClick={handleClose}>Cancel</Button>
         </DialogActions>
       </form>
+      <Snackbar open={duplicateOpen} autoHideDuration={4000} onClose={handleDuplicateClose}>
+  <Alert onClose={handleDuplicateClose} severity="warning" sx={{ width: '100%' }}>
+    Employee with the same Name and DOB already exists.
+  </Alert>
+</Snackbar>
+
     </Dialog>
   );
 }
