@@ -13,7 +13,7 @@ function App() {
   const [openForm, setOpenForm] = useState(false);
   const handleSave = async (formData) => {
     try {
-      const response = await axios.post('https://localhost:7295/api/Employee', formData);
+      const response = await axios.post('https://localhost:7295/api/employee', formData);
       console.log('Employee saved:', response.data);
       setOpenForm(false); // Close dialog after saving
       // Optionally: refresh the employee list here
