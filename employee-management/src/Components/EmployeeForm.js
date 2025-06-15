@@ -1,15 +1,16 @@
 // src/components/EmployeeForm.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import $ from 'jquery';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, MenuItem, Grid, InputLabel, FormControl, Select
 } from '@mui/material';
-import { getStates, getEmployees, createEmployee } from '../Services/api';
-import 'jquery-validation/dist/jquery.validate.min.js'; 
+import { getStates } from '../Services/api';
+import 'jquery-validation/dist/jquery.validate.min.js';
 
 export default function EmployeeForm({ open, handleClose, handleSave, initialData }) {
   const [form, setForm] = useState(initialData || {});
   const [states, setStates] = useState([]);
+  const formRef = useRef();
 
   useEffect(() => {
     getStates().then(res => setStates(res.data));
@@ -17,24 +18,49 @@ export default function EmployeeForm({ open, handleClose, handleSave, initialDat
   }, [initialData]);
 
   useEffect(() => {
-    $("#empForm").validate({
-      rules: {
-        Name: "required",
-        Designation: "required",
-        DOB: "required",
-        DOJ: "required",
-        Salary: "required"
-      },
-      messages: {
-        Name: "Please enter name"
-      },
-      submitHandler: () => handleSave(form)
-    });
-  }, [form]);
+    if (open) {
+      const $form = $("#empForm");
+
+      $form.validate({
+        rules: {
+          Name: "required",
+          Designation: "required",
+          DOB: "required",
+          DOJ: "required",
+          Salary: {
+            required: true,
+            number: true
+          },
+          Gender: "required",
+          State: "required"
+        },
+        messages: {
+          Name: "Please enter name",
+        },
+        submitHandler: function () {
+          handleSave({
+            ...form,
+            Salary: parseFloat(form.Salary) || 0,
+            DOB: form.DOB?.toString(),
+            DOJ: form.DOJ?.toString()
+          });
+        }
+      });
+    }
+
+    return () => {
+      $("#empForm").off(); // remove validation on unmount
+    };
+  }, [form, open]);
 
   const calculateAge = (DOB) => {
     const birth = new Date(DOB);
-    const age = new Date().getFullYear() - birth.getFullYear();
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
     return age;
   };
 
@@ -48,30 +74,30 @@ export default function EmployeeForm({ open, handleClose, handleSave, initialDat
   };
 
   return (
-    <Dialog open={open} onClose={handleClose}>
+    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
       <DialogTitle>{form?.Id ? 'Edit Employee' : 'Add Employee'}</DialogTitle>
-      <form id="empForm">
+      <form id="empForm" ref={formRef}>
         <DialogContent>
           <Grid container spacing={2}>
             <Grid item xs={6}>
-              <TextField fullWidth name="Name" label="Name" value={form.Name || ''} onChange={handleChange} required />
+              <TextField fullWidth name="Name" label="Name" value={form.Name || ''} onChange={handleChange} />
             </Grid>
             <Grid item xs={6}>
-              <TextField fullWidth name="Designation" label="Designation" value={form.Designation || ''} onChange={handleChange} required />
+              <TextField fullWidth name="Designation" label="Designation" value={form.Designation || ''} onChange={handleChange} />
             </Grid>
             <Grid item xs={6}>
               <TextField fullWidth type="date" name="DOB" label="DOB" InputLabelProps={{ shrink: true }}
-                value={form.DOB || ''} onChange={handleChange} required />
+                value={form.DOB || ''} onChange={handleChange} />
             </Grid>
             <Grid item xs={6}>
               <TextField fullWidth label="Age" value={form.Age || ''} disabled />
             </Grid>
             <Grid item xs={6}>
               <TextField fullWidth type="date" name="DOJ" label="Date of Joining" InputLabelProps={{ shrink: true }}
-                value={form.DOJ || ''} onChange={handleChange} required />
+                value={form.DOJ || ''} onChange={handleChange} />
             </Grid>
             <Grid item xs={6}>
-              <TextField fullWidth type="number" name="Salary" label="Salary" value={form.Salary || ''} onChange={handleChange} required />
+              <TextField fullWidth type="number" name="Salary" label="Salary" value={form.Salary || ''} onChange={handleChange} />
             </Grid>
             <Grid item xs={6}>
               <FormControl fullWidth>
@@ -86,7 +112,9 @@ export default function EmployeeForm({ open, handleClose, handleSave, initialDat
               <FormControl fullWidth>
                 <InputLabel>State</InputLabel>
                 <Select name="State" value={form.State || ''} onChange={handleChange}>
-                  {states.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+                  {states.map((s) => (
+                    <MenuItem key={s} value={s}>{s}</MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Grid>
