@@ -7,7 +7,6 @@ import {
   DialogContent, DialogActions, Checkbox, TextField
 } from '@mui/material';
 import $ from 'jquery';
-
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -23,27 +22,27 @@ function EmployeeTable() {
   const [sortOrder, setSortOrder] = useState('asc');
   const recordsPerPage = 5;
   const [formData, setFormData] = useState({
-    id: '',
-    name: '',
-    dob: '',
-    doj: '',
-    designation: '',
-    salary: '',
-    gender: '',
-    state: ''
+    id: '', name: '', dob: '', doj: '',
+    designation: '', salary: '', gender: '', state: ''
   });
   const [editMode, setEditMode] = useState(false);
+
+  const columns = [
+    { label: 'Name', field: 'Name' },
+    { label: 'DOB', field: 'DOB' },
+    { label: 'DOJ', field: 'DOJ' },
+    { label: 'Designation', field: 'Designation' },
+    { label: 'Salary', field: 'Salary' },
+    { label: 'Gender', field: 'Gender' },
+    { label: 'State', field: 'State' }
+  ];
 
   const downloadPDF = () => {
     const doc = new jsPDF();
     doc.text("Employee List", 14, 15);
     const tableColumn = ["Name", "Designation", "Gender", "DOB", "Salary"];
     const tableRows = employees.map(emp => [
-      emp.Name,
-      emp.Designation,
-      emp.Gender,
-      emp.DOB,
-      emp.Salary
+      emp.Name, emp.Designation, emp.Gender, emp.DOB, emp.Salary
     ]);
     autoTable(doc, {
       head: [tableColumn],
@@ -110,7 +109,8 @@ function EmployeeTable() {
 
   const clearForm = () => {
     setFormData({
-      id: '', name: '', dob: '', doj: '', designation: '', salary: '', gender: '', state: ''
+      id: '', name: '', dob: '', doj: '',
+      designation: '', salary: '', gender: '', state: ''
     });
   };
 
@@ -161,17 +161,27 @@ function EmployeeTable() {
 
   const sortedEmployees = [...filteredEmployees].sort((a, b) => {
     if (!sortField) return 0;
-    const valA = a[sortField]?.toString().toLowerCase();
-    const valB = b[sortField]?.toString().toLowerCase();
-    if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
-    if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+
+    const valA = a[sortField];
+    const valB = b[sortField];
+
+    // Numeric sorting for salary
+    if (sortField === 'Salary') {
+      const numA = parseFloat(valA);
+      const numB = parseFloat(valB);
+      return sortOrder === 'asc' ? numA - numB : numB - numA;
+    }
+
+    const strA = valA?.toString().toLowerCase() || '';
+    const strB = valB?.toString().toLowerCase() || '';
+    if (strA < strB) return sortOrder === 'asc' ? -1 : 1;
+    if (strA > strB) return sortOrder === 'asc' ? 1 : -1;
     return 0;
   });
 
   const indexOfLastRecord = currentPage * recordsPerPage;
   const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
   const currentRecords = sortedEmployees.slice(indexOfFirstRecord, indexOfLastRecord);
-
   const totalPages = Math.ceil(sortedEmployees.length / recordsPerPage);
 
   useEffect(() => {
@@ -192,6 +202,7 @@ function EmployeeTable() {
   return (
     <Paper style={{ marginTop: '20px', padding: '16px' }}>
       <Typography variant="h6" gutterBottom>Employee List</Typography>
+
       <TextField
         label="Search by name"
         value={searchTerm}
@@ -199,20 +210,26 @@ function EmployeeTable() {
         fullWidth
         margin="normal"
       />
+
       <Table size="small">
         <TableHead>
           <TableRow>
             <TableCell padding="checkbox">
               <Checkbox checked={selectAll} onChange={handleSelectAll} />
             </TableCell>
-            {['Name', 'DOB', 'DOJ', 'Designation', 'Salary', 'Gender', 'State'].map(col => (
-              <TableCell key={col} onClick={() => handleSort(col)} style={{ cursor: 'pointer' }}>
-                {col.toUpperCase()}
+            {columns.map(col => (
+              <TableCell
+                key={col.field}
+                onClick={() => handleSort(col.field)}
+                style={{ cursor: 'pointer' }}
+              >
+                {col.label.toUpperCase()} {sortField === col.field ? (sortOrder === 'asc' ? '🔼' : '🔽') : ''}
               </TableCell>
             ))}
             <TableCell align="center">DELETE</TableCell>
           </TableRow>
         </TableHead>
+
         <TableBody>
           {currentRecords.map(emp => (
             <TableRow key={emp.Id}>
@@ -222,7 +239,10 @@ function EmployeeTable() {
                   onChange={() => handleCheckboxChange(emp.Id)}
                 />
               </TableCell>
-              <TableCell style={{ cursor: 'pointer', color: 'blue' }} onClick={() => openEditDialog(emp)}>
+              <TableCell
+                style={{ cursor: 'pointer', color: 'blue' }}
+                onClick={() => openEditDialog(emp)}
+              >
                 {emp.Name}
               </TableCell>
               <TableCell>{emp.DOB ? new Date(emp.DOB).toLocaleDateString() : 'N/A'}</TableCell>
@@ -252,19 +272,22 @@ function EmployeeTable() {
                 variant="outlined"
                 color="secondary"
                 onClick={downloadPDF}
-                style={{ marginLeft: '10px' }}>
+                style={{ marginLeft: '10px' }}
+              >
                 Download PDF
               </Button>
             </TableCell>
           </TableRow>
         </TableBody>
       </Table>
+
       <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'space-between' }}>
         <Button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)}>Previous</Button>
         <Typography>Page {currentPage} of {totalPages}</Typography>
         <Button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => prev + 1)}>Next</Button>
       </div>
 
+      {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
         <DialogTitle>Confirm Delete</DialogTitle>
         <DialogContent>
@@ -276,6 +299,7 @@ function EmployeeTable() {
         </DialogActions>
       </Dialog>
 
+      {/* Edit Dialog */}
       <Dialog open={editMode} onClose={closeEditDialog}>
         <DialogTitle>Edit Employee</DialogTitle>
         <DialogContent>
